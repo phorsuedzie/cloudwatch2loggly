@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/psquickitjayant/cloudwatch2loggly.git"
+    "url": "https://github.com/infopark/cloudwatch2loggly.git"
   },
   "keywords": [
     "Loggly",
@@ -17,9 +17,9 @@
   "author": "psquickitjayant",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/psquickitjayant/cloudwatch2loggly/issues"
+    "url": "https://github.com/infopark/cloudwatch2loggly/issues"
   },
-  "homepage": "https://github.com/psquickitjayant/cloudwatch2loggly",
+  "homepage": "https://github.com/infopark/cloudwatch2loggly",
   "dependencies": {
     "aws-sdk": "^2.2.25",
     "q": "^1.4.1",
