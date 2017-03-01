@@ -9,6 +9,7 @@
 
 var AWS = require('aws-sdk'),
     http = require('http'),
+    util = require('util'),
     zlib = require('zlib');
 
 // loggly url, token and tag configuration
