@@ -1,9 +1,9 @@
-/** 
- * To setup your encrypted Loggly Customer Token inside the script use the following steps 
+/**
+ * To setup your encrypted Loggly Customer Token inside the script use the following steps
  * 1. Create a KMS key - http://docs.aws.amazon.com/kms/latest/developerguide/create-keys.html
  * 2. Encrypt the Loggly Customer Token using the AWS CLI
  *        aws kms encrypt --key-id alias/<your KMS key arn> --plaintext "<your loggly customer token>"
- * 3. Copy the base-64 encoded, encrypted token from step 2's CLI output (CiphertextBlob attribute) and 
+ * 3. Copy the base-64 encoded, encrypted token from step 2's CLI output (CiphertextBlob attribute) and
  *    paste it in place of the 'your KMS encypted key' below in line 27
  */
 
@@ -58,14 +58,26 @@ exports.handler = function (event, context) {
     });
 
     // converts the event to a valid JSON object with the sufficient infomation required
+    // - detects foreman prefixes and extracts it into own field
+    // - detects and merges JSON data
     function parseEvent(logEvent, logGroupName, logStreamName) {
-        return {
-            // remove '\n' character at the end of the event
-            message: logEvent.message.substring(0, logEvent.message.length - 1),
-            logGroupName: logGroupName,
-            logStreamName: logStreamName,
-            timestamp: new Date(logEvent.timestamp).toISOString()
+        var result = {
+            logGroupName,
+            logStreamName,
+            timestamp: new Date(logEvent.timestamp).toISOString(),
         };
+        var message = logEvent.message.trim();
+        var foreman_match = message.match(/^\d+:\d+:\d+ +(\w+\.\d+) +\| +(.*)$/);
+        if (foreman_match) {
+            result.foreman_process = foreman_match[1];
+            message = foreman_match[2];
+        }
+        if (message.startsWith("{") && message.endsWith("}")) {
+            util._extend(result, JSON.parse(message));
+        } else {
+            result.message = message;
+        }
+        return result;
     }
 
     // joins all the events to a single event
