@@ -14,8 +14,8 @@ var AWS = require('aws-sdk'),
 // loggly url, token and tag configuration
 // user need to edit while uploading code via blueprint
 var logglyConfiguration = {
-    hostName: 'logs-01.loggly.com',
-    tags: 'CloudWatch2Loggly'
+    hostName: process.env.logglyHostName,
+    tags: process.env.logglyTags
 };
 
 var cloudWatchLogs = new AWS.CloudWatchLogs({
@@ -23,9 +23,7 @@ var cloudWatchLogs = new AWS.CloudWatchLogs({
 });
 
 // use KMS to decrypt customer token
-var decryptParams = {
-    CiphertextBlob: new Buffer('your KMS encypted key', 'base64')
-};
+var decryptParams = {CiphertextBlob: new Buffer(process.env.kmsEncryptedCustomerToken, 'base64')};
 
 var kms = new AWS.KMS({
     apiVersion: '2014-11-01'
