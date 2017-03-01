@@ -21,9 +21,5 @@
   },
   "homepage": "https://github.com/infopark/cloudwatch2loggly",
   "dependencies": {
-    "aws-sdk": "^2.2.25",
-    "q": "^1.4.1",
-    "request": "^2.67.0",
-    "zlib": "^1.0.5"
   }
 }
