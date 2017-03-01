@@ -18,10 +18,6 @@ var logglyConfiguration = {
     tags: process.env.logglyTags
 };
 
-var cloudWatchLogs = new AWS.CloudWatchLogs({
-    apiVersion: '2014-03-28'
-});
-
 // use KMS to decrypt customer token
 var decryptParams = {CiphertextBlob: new Buffer(process.env.kmsEncryptedCustomerToken, 'base64')};
 
