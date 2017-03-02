@@ -1,16 +1,10 @@
-/**
- * To setup your encrypted Loggly Customer Token inside the script use the following steps
- * 1. Create a KMS key - http://docs.aws.amazon.com/kms/latest/developerguide/create-keys.html
- * 2. Encrypt the Loggly Customer Token using the AWS CLI
- *        aws kms encrypt --key-id alias/<your KMS key arn> --plaintext "<your loggly customer token>"
- * 3. Copy the base-64 encoded, encrypted token from step 2's CLI output (CiphertextBlob attribute) and
- *    paste it in place of the 'your KMS encypted key' below in line 27
- */
+'use strict';
 
 var AWS = require('aws-sdk'),
     http = require('http'),
     util = require('util'),
-    zlib = require('zlib');
+    zlib = require('zlib'),
+    LogEventParser = require('scrivito-log-event-parser');
 
 // loggly url, token and tag configuration
 // user need to edit while uploading code via blueprint
@@ -35,29 +29,6 @@ kms.decrypt(decryptParams, function (error, data) {
 
 // entry point
 exports.handler = function (event, context, callback) {
-    // converts the event to a valid JSON object with the sufficient infomation required
-    // - detects foreman prefixes and extracts it into own field
-    // - detects and merges JSON data
-    function parseEvent(logEvent, logGroupName, logStreamName) {
-        var result = {
-            logGroupName,
-            logStreamName,
-            timestamp: new Date(logEvent.timestamp).toISOString(),
-        };
-        var message = logEvent.message.trim();
-        var foreman_match = message.match(/^\d+:\d+:\d+ +(\w+\.\d+) +\| +(.*)$/);
-        if (foreman_match) {
-            result.foreman_process = foreman_match[1];
-            message = foreman_match[2];
-        }
-        if (message.startsWith("{") && message.endsWith("}")) {
-            util._extend(result, JSON.parse(message));
-        } else {
-            result.message = message;
-        }
-        return result;
-    }
-
     // joins all the events to a single event
     // and sends to Loggly using bulk endpoint
     function postEventsToLoggly(parsedEvents) {
@@ -127,7 +98,8 @@ exports.handler = function (event, context, callback) {
         } else {
             var result_parsed = JSON.parse(result.toString('ascii'));
             var parsedEvents = result_parsed.logEvents.map(function(logEvent) {
-                return parseEvent(logEvent, result_parsed.logGroup, result_parsed.logStream);
+                return LogEventParser.parse(
+                      logEvent, result_parsed.logGroup, result_parsed.logStream);
             });
 
             postEventsToLoggly(parsedEvents);

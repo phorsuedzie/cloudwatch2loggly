@@ -20,6 +20,12 @@
     "url": "https://github.com/infopark/cloudwatch2loggly/issues"
   },
   "homepage": "https://github.com/infopark/cloudwatch2loggly",
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "aws-sdk": "^2.22.0",
+    "code_cowboy-jasmine-shared-examples": "0.0.2",
+    "jasmine": "^2.5.3",
+    "jasmine-spec-reporter": "^3.2.0",
+    "shared-examples-for": "^0.1.3"
   }
 }
