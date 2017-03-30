@@ -21,12 +21,8 @@ var postEventsToLoggly = function(token, parsedEvents) {
     console.log(`Sending ${parsedEvents.length} events to loggly.`);
     var req = https.request(options, function (res) {
       console.log(`Loggly response status code: ${res.statusCode}`)
-      res.on('data', function (chunk) {
-        console.log(`Loggly responded: ${chunk}`);
-      });
-      res.on('end', function () {
-        resolve();
-      });
+      res.on('data', function (chunk) { console.log(`Loggly responded: ${chunk}`); });
+      res.on('end', function () { resolve(); });
     });
 
     req.write(finalEvent);
