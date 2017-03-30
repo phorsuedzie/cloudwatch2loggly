@@ -18,6 +18,8 @@ describe("cloudwatch2loggly", () => {
 
   beforeEach(() => {
     process.env.kmsEncryptedCustomerToken = "Zm9v";
+    process.env.logglyHostName = "the loggly host";
+    process.env.logglyTags = "the loggly tags";
 
     event = buildEvent({
       logEvents: ["event 1", "event 2", "event 3"],
@@ -30,10 +32,16 @@ describe("cloudwatch2loggly", () => {
 
     this.parseSpy = spyOn(LogEventParser, 'parse').and.returnValue("parsed event");
 
-    spyOn(http, 'request').and.callFake((options, responseHandler) => {
+    this.request = {
+      on: () => {},
+      write: () => {},
+      end: () => { this.request.onEnd(); },
+    };
+    this.requestSpy = spyOn(http, 'request').and.callFake((options, responseHandler) => {
       var res = {on: (key, callback) => { res[key] = callback; }};
       responseHandler(res);
-      res['end']();
+      this.request.onEnd = () => { res['end'](); };
+      return this.request;
     });
   });
 
@@ -54,6 +62,25 @@ describe("cloudwatch2loggly", () => {
       expect(this.parseSpy).toHaveBeenCalledWith("event 1", "log group", "log stream");
       expect(this.parseSpy).toHaveBeenCalledWith("event 2", "log group", "log stream");
       expect(this.parseSpy).toHaveBeenCalledWith("event 3", "log group", "log stream");
+    }).verify(done);
+  });
+
+  it("transfers the events to Loggly", (done) => {
+    var requestWriteSpy = spyOn(this.request, 'write');
+    var requestEndSpy = spyOn(this.request, 'end').and.callThrough();
+    handleEvent().expectResult(() => {
+      expect(this.requestSpy).toHaveBeenCalled();
+      var requestOptions = this.requestSpy.calls.argsFor(0)[0];
+      expect(requestOptions.hostname).toEqual("the loggly host");
+      expect(requestOptions.path).toEqual('/bulk/token/tag/the%20loggly%20tags');
+      expect(requestOptions.method).toEqual('POST');
+      expect(requestOptions.headers)
+          .toEqual({"Content-Type": 'application/json', "Content-Length": 44});
+
+      expect(requestWriteSpy)
+          .toHaveBeenCalledWith('"parsed event"\n"parsed event"\n"parsed event"');
+
+      expect(requestEndSpy).toHaveBeenCalled();
     }).verify(done);
   });
 });
