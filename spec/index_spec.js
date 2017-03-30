@@ -41,7 +41,7 @@ describe("cloudwatch2loggly", () => {
     this.requestSpy = spyOn(https, 'request').and.callFake((options, responseHandler) => {
       var res = {on: (key, callback) => { res[key] = callback; }};
       responseHandler(res);
-      this.request.onEnd = () => { res['end'](); };
+      this.request.onEnd = () => { res.end(); };
       return this.request;
     });
 
@@ -82,6 +82,26 @@ describe("cloudwatch2loggly", () => {
     }).verify(done);
   });
 
+  it("logs the Loggly response", (done) => {
+    this.requestSpy.and.callFake((options, responseHandler) => {
+      var res = {on: (key, callback) => { res[key] = callback; }};
+      res.statusCode = 200;
+      responseHandler(res);
+      this.request.onEnd = () => {
+        res.data("part one");
+        res.data("part two");
+        res.end();
+      };
+      return this.request;
+    });
+
+    handleEvent().expectResult(() => {
+      expect(this.logSpy).toHaveBeenCalledWith("Loggly response status code: 200");
+      expect(this.logSpy).toHaveBeenCalledWith("Loggly responded: part one");
+      expect(this.logSpy).toHaveBeenCalledWith("Loggly responded: part two");
+    }).verify(done);
+  });
+
   describe("when JSON parsing fails", () => {
     beforeEach(() => {
       event = {
@@ -106,6 +126,23 @@ describe("cloudwatch2loggly", () => {
     it("fails with the occurred error", (done) => {
       handleEvent().expectError((error) => {
         expect(error).toEqual(Error("fail"));
+      }).verify(done);
+    });
+  });
+
+  describe("when loggly responds with error", () => {
+    beforeEach(() => {
+      this.requestSpy.and.callFake((options, responseHandler) => {
+        var res = {on: (key, callback) => { res[key] = callback; }};
+        responseHandler(res);
+        this.request.onEnd = () => { throw "failure"; };
+        return this.request;
+      });
+    });
+
+    it("fails with the occurred error", (done) => {
+      handleEvent().expectError((error) => {
+        expect(error).toEqual(Error("failure"));
       }).verify(done);
     });
   });
