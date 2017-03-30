@@ -1,7 +1,7 @@
 'use strict';
 
 var AWS = require('aws-sdk'),
-    http = require('http'),
+    https = require('https'),
     util = require('util'),
     zlib = require('zlib'),
     LogEventParser = require('scrivito-log-event-parser');
@@ -61,7 +61,7 @@ exports.handler = function (event, context, callback) {
         }
       };
 
-      const req = http.request(options, function (res) {
+      const req = https.request(options, function (res) {
         res.on('data', function (result) {
           result = JSON.parse(result.toString());
           if (result.response === 'ok') {

@@ -4,7 +4,7 @@ const LambdaTester = require('lambda-tester');
 const Aws = require('aws-sdk');
 Aws.config.update({region: 'eu-west-1'});
 const zlib = require('zlib');
-const http = require('http');
+const https = require('https');
 const LogEventParser = require('scrivito-log-event-parser');
 
 describe("cloudwatch2loggly", () => {
@@ -37,7 +37,7 @@ describe("cloudwatch2loggly", () => {
       write: () => {},
       end: () => { this.request.onEnd(); },
     };
-    this.requestSpy = spyOn(http, 'request').and.callFake((options, responseHandler) => {
+    this.requestSpy = spyOn(https, 'request').and.callFake((options, responseHandler) => {
       var res = {on: (key, callback) => { res[key] = callback; }};
       responseHandler(res);
       this.request.onEnd = () => { res['end'](); };
