@@ -43,7 +43,13 @@ exports.handler = function (event, context, callback) {
     var token = data.Plaintext.toString('ascii');
     var payload = new Buffer(event.awslogs.data, 'base64');
     var rawPayload = zlib.gunzipSync(payload).toString('ascii');
-    var parsedPayload = JSON.parse(rawPayload);
+    var parsedPayload;
+    try {
+      parsedPayload = JSON.parse(rawPayload);
+    } catch(e) {
+      console.log("Error while parsing json. Input: " + rawPayload);
+      throw e;
+    }
     var parsedEvents = parsedPayload.logEvents.map(function(logEvent) {
       return LogEventParser.parse(logEvent, parsedPayload.logGroup, parsedPayload.logStream);
     });

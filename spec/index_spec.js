@@ -45,7 +45,7 @@ describe("cloudwatch2loggly", () => {
       return this.request;
     });
 
-    spyOn(console, 'log');
+    this.logSpy = spyOn(console, 'log');
   });
 
   it("decrypts the Loggly API token", (done) => {
@@ -80,5 +80,23 @@ describe("cloudwatch2loggly", () => {
 
       expect(requestEndSpy).toHaveBeenCalled();
     }).verify(done);
+  });
+
+  describe("when JSON parsing fails", () => {
+    beforeEach(() => {
+      event = {
+        "awslogs": {
+          "data": zlib.gzipSync("this ain't json").toString("base64")
+        }
+      };
+    });
+
+    it("logs details and fails with the occurred error", (done) => {
+      handleEvent().expectError((error) => {
+        expect(error).toEqual(SyntaxError('Unexpected token h in JSON at position 1'));
+        expect(this.logSpy)
+            .toHaveBeenCalledWith("Error while parsing json. Input: this ain't json");
+      }).verify(done);
+    });
   });
 });
