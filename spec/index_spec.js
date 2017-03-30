@@ -37,6 +37,7 @@ describe("cloudwatch2loggly", () => {
       on: () => {},
       write: () => {},
       end: () => { this.request.onEnd(); },
+      setTimeout: () => {},
     };
     this.requestSpy = spyOn(https, 'request').and.callFake((options, responseHandler) => {
       var res = {on: (key, callback) => { res[key] = callback; }};

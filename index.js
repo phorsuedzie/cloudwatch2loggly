@@ -15,18 +15,30 @@ var postEventsToLoggly = function(token, parsedEvents) {
     path: '/bulk/' + token + '/tag/' + encodeURIComponent(process.env.logglyTags),
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'Content-Length': finalEvent.length},
+    timeout: 2000,
   };
 
   return new Promise((resolve, reject) => {
     console.log(`Sending ${parsedEvents.length} events to loggly.`);
-    var req = https.request(options, function (res) {
-      console.log(`Loggly response status code: ${res.statusCode}`)
-      res.on('data', function (chunk) { console.log(`Loggly responded: ${chunk}`); });
-      res.on('end', function () { resolve(); });
-    });
 
-    req.write(finalEvent);
-    req.end();
+    var perform = () => {
+      var req = https.request(options, function (res) {
+        console.log(`Loggly response status code: ${res.statusCode}`)
+        res.on('data', function (chunk) { console.log(`Loggly responded: ${chunk}`); });
+        res.on('end', function () { resolve(); });
+      });
+
+      req.setTimeout(9900, () => {
+        req.abort();
+        console.log("Request to Loggly timed out. Retrying...");
+        perform();
+      });
+
+      req.write(finalEvent);
+      req.end();
+    };
+
+    perform();
   });
 };
 
