@@ -6,35 +6,35 @@ const AWS = require('aws-sdk'),
     zlib = require('zlib'),
     LogEventParser = require('scrivito-log-event-parser');
 
-exports.handler = function (event, context, callback) {
-  function postEventsToLoggly(token, parsedEvents) {
-    // Join all events for sending via bulk endpoint.
-    var finalEvent = parsedEvents.map(JSON.stringify).join('\n');
+var postEventsToLoggly = function(token, parsedEvents) {
+  // Join all events for sending via bulk endpoint.
+  var finalEvent = parsedEvents.map(JSON.stringify).join('\n');
 
-    var options = {
-      hostname: process.env.logglyHostName,
-      path: '/bulk/' + token + '/tag/' + encodeURIComponent(process.env.logglyTags),
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'Content-Length': finalEvent.length},
-    };
+  var options = {
+    hostname: process.env.logglyHostName,
+    path: '/bulk/' + token + '/tag/' + encodeURIComponent(process.env.logglyTags),
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'Content-Length': finalEvent.length},
+  };
 
-    return new Promise((resolve, reject) => {
-      console.log(`Sending ${parsedEvents.length} events to loggly.`);
-      var req = https.request(options, function (res) {
-        console.log(`Loggly response status code: ${res.statusCode}`)
-        res.on('data', function (chunk) {
-          console.log(`Loggly responded: ${chunk}`);
-        });
-        res.on('end', function () {
-          resolve();
-        });
+  return new Promise((resolve, reject) => {
+    console.log(`Sending ${parsedEvents.length} events to loggly.`);
+    var req = https.request(options, function (res) {
+      console.log(`Loggly response status code: ${res.statusCode}`)
+      res.on('data', function (chunk) {
+        console.log(`Loggly responded: ${chunk}`);
       });
-
-      req.write(finalEvent);
-      req.end();
+      res.on('end', function () {
+        resolve();
+      });
     });
-  }
 
+    req.write(finalEvent);
+    req.end();
+  });
+};
+
+exports.handler = function (event, context, callback) {
   var kms = new AWS.KMS();
 
   kms.decrypt({

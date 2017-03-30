@@ -99,4 +99,14 @@ describe("cloudwatch2loggly", () => {
       }).verify(done);
     });
   });
+
+  describe("when token decryption fails", () => {
+    beforeEach(() => { stubAwsServiceCall(this.kms, 'decrypt').setReturnValue(Error('fail')); });
+
+    it("fails with the occurred error", (done) => {
+      handleEvent().expectError((error) => {
+        expect(error).toEqual(Error("fail"));
+      }).verify(done);
+    });
+  });
 });
