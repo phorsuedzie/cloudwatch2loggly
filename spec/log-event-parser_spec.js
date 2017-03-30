@@ -1,5 +1,4 @@
 'use strict';
-
 describe("LogEventParser", () => {
   const LogEventParser = require('scrivito-log-event-parser');
 
@@ -43,6 +42,21 @@ describe("LogEventParser", () => {
 
     itBehavesLike("parsing a JSON message");
 
+    sharedExamplesFor("parsing a Rails log line", () => {
+      beforeEach(() => {
+        core_message = 'I, [2017-03-30T11:56:09.027640 #32] INFO -- : [some] [tags] the message\n';
+      });
+
+      it("contains the log level, process ID, tags and the message", () => {
+        expect(parseEvent()['log_level']).toEqual("INFO");
+        expect(parseEvent()['pid']).toEqual("32");
+        expect(parseEvent()['log_tags']).toEqual(['some', 'tags']);
+        expect(parseEvent()['message']).toEqual('the message');
+      });
+    });
+
+    itBehavesLike("parsing a Rails log line");
+
     describe("for foreman message", () => {
       beforeEach(() => {
         core_message = "here goes the message (anything you want)\n";
@@ -55,6 +69,7 @@ describe("LogEventParser", () => {
       });
 
       itBehavesLike("parsing a JSON message");
+      itBehavesLike("parsing a Rails log line");
     });
   });
 });
