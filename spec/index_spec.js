@@ -8,7 +8,7 @@ const https = require('https');
 const LogEventParser = require('scrivito-log-event-parser');
 
 describe("cloudwatch2loggly", () => {
-  var CloudWatch2Loggly;
+  var CloudWatch2Loggly = require('../index');
 
   var event;
   var handleEvent = () => { return LambdaTester(CloudWatch2Loggly.handler).event(event); };
@@ -26,8 +26,9 @@ describe("cloudwatch2loggly", () => {
       logGroup: "log group",
       logStream: "log stream",
     });
-    this.decryptResult = {Plaintext: "token"};
-    this.kms = {decrypt: (params, callback) => { callback(null, this.decryptResult); }};
+
+    this.decryptResult = {promise: () => { return Promise.resolve({Plaintext: "token"}); }};
+    this.kms = {decrypt: () => { return this.decryptResult; }};
     this.kmsSpy = spyOn(Aws, 'KMS').and.returnValue(this.kms);
 
     this.parseSpy = spyOn(LogEventParser, 'parse').and.returnValue("parsed event");
@@ -43,17 +44,14 @@ describe("cloudwatch2loggly", () => {
       this.request.onEnd = () => { res['end'](); };
       return this.request;
     });
+
+    spyOn(console, 'log');
   });
 
   it("decrypts the Loggly API token", (done) => {
-    var decryptSpy = spyOn(this.kms, 'decrypt').and.callFake((params, callback) => {
-      expect(params).toEqual({CiphertextBlob: new Buffer("Zm9v", 'base64')});
-      callback(null, this.decryptResult);
-    });
-    // tempoarily, to complete functional tests before refactoring
-    CloudWatch2Loggly = require('../index');
+    var decryptSpy = spyOn(this.kms, 'decrypt').and.returnValue(this.decryptResult);
     handleEvent().expectResult(() => {
-      expect(decryptSpy).toHaveBeenCalled();
+      expect(decryptSpy).toHaveBeenCalledWith({CiphertextBlob: new Buffer("Zm9v", 'base64')});
     }).verify(done);
   });
 
