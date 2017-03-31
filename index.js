@@ -50,7 +50,7 @@ exports.handler = function (event, context, callback) {
   }).promise().then((data) => {
     var token = data.Plaintext.toString('ascii');
     var payload = new Buffer(event.awslogs.data, 'base64');
-    var rawPayload = zlib.gunzipSync(payload).toString('ascii');
+    var rawPayload = zlib.gunzipSync(payload).toString();
     var parsedPayload;
     try {
       parsedPayload = JSON.parse(rawPayload);

@@ -103,6 +103,28 @@ describe("cloudwatch2loggly", () => {
     }).verify(done);
   });
 
+  describe("when log event contains UTF-8", () => {
+    beforeEach(() => {
+      this.parseSpy.and.callFake((input) => { return `parsed ${input}`; });
+      event = buildEvent({
+        logEvents: ["€vent", "üvent", "evenд"],
+        logGroup: "log group",
+        logStream: "log stream",
+      });
+    });
+
+    it("transfers the events to Loggly", (done) => {
+      var requestWriteSpy = spyOn(this.request, 'write');
+      var requestEndSpy = spyOn(this.request, 'end').and.callThrough();
+      handleEvent().expectResult(() => {
+        expect(this.requestSpy).toHaveBeenCalled();
+        expect(requestWriteSpy).
+            toHaveBeenCalledWith('"parsed €vent"\n"parsed üvent"\n"parsed evenд"');
+        expect(requestEndSpy).toHaveBeenCalled();
+      }).verify(done);
+    });
+  });
+
   describe("when JSON parsing fails", () => {
     beforeEach(() => {
       event = {
