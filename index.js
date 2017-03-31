@@ -29,7 +29,6 @@ var postEventsToLoggly = function(token, parsedEvents) {
       });
 
       req.setTimeout(9900, () => {
-        req.abort();
         console.log("Request to Loggly timed out. Retrying...");
         perform();
       });
