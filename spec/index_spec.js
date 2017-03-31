@@ -125,6 +125,38 @@ describe("cloudwatch2loggly", () => {
     });
   });
 
+  // This sounds wrong but is what has been observed: Loggly returns an OK result but the response's
+  // “end” callback is not being called within the lambda's timeout. The request timeout isn't
+  // triggered either.
+  describe("when HTTPS response is not ended properly", () => {
+    beforeEach(() => {
+      this.requestSpy.and.callFake((options, responseHandler) => {
+        var res = {on: (key, callback) => { res[key] = callback; }};
+        responseHandler(res);
+        this.request.onEnd = () => { res.data('{"response": "ok"}'); };
+        return this.request;
+      });
+    });
+
+    it("succeeds nevertheless", (done) => { handleEvent().expectResult().verify(done); });
+
+    describe("when a response chunk is not JSON", () => {
+      beforeEach(() => {
+        this.requestSpy.and.callFake((options, responseHandler) => {
+          var res = {on: (key, callback) => { res[key] = callback; }};
+          responseHandler(res);
+          this.request.onEnd = () => {
+            res.data("this ain't JSON");
+            res.data('{"response": "ok"}');
+          };
+          return this.request;
+        });
+      });
+
+      it("succeeds nevertheless", (done) => { handleEvent().expectResult().verify(done); });
+    });
+  });
+
   describe("when JSON parsing fails", () => {
     beforeEach(() => {
       event = {
