@@ -205,4 +205,42 @@ describe("cloudwatch2loggly", () => {
       });
     });
   });
+
+  describe("with S3 source", () => {
+    var buildEvent = (e) => {
+      return {
+        Records: [
+          {
+            s3: {
+              bucket: {name: "test bucket"},
+              object: {key: "log obj key", size: 123},
+            },
+          },
+          {
+            s3: {
+              bucket: {name: "other test bucket"},
+              object: {key: "other log obj key", size: 123},
+            },
+          },
+        ],
+      };
+    };
+
+
+    beforeEach(() => {
+      event = buildEvent();
+    });
+
+    it("reads all the log data from S3", (done) => {
+      var s3 = new Aws.S3();
+      spyOn(Aws, 'S3').and.returnValue(s3);
+      var s3DownloadSpy = spyOn(s3, 'getObject').and
+          .returnValue({promise: () => { return Promise.resolve("s3\ninput\ndata"); }});
+      handleEvent().expectResult(() => {
+        expect(s3DownloadSpy).toHaveBeenCalledWith({Bucket: 'test bucket', Key: 'log obj key'});
+        expect(s3DownloadSpy).toHaveBeenCalledWith({
+            Bucket: 'other test bucket', Key: 'other log obj key'});
+      }).verify(done);
+    });
+  });
 });
