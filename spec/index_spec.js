@@ -231,12 +231,34 @@ describe("cloudwatch2loggly", () => {
     beforeEach(() => {
       event = buildEvent();
 
-      this.parseSpy = spyOn(S3EventParser, 'parse').and.returnValue("parsed event");
       var s3 = new Aws.S3();
       spyOn(Aws, 'S3').and.returnValue(s3);
       this.s3DownloadSpy = spyOn(s3, 'getObject').and.returnValues(
         {promise: () => { return Promise.resolve("s3\ninput\ndata"); }},
         {promise: () => { return Promise.resolve("other s3\nother input\nother data"); }}
+      );
+      this.s3TagSpy = spyOn(s3, 'getBucketTagging').and.returnValues(
+        {promise: () => {
+          return Promise.resolve({
+            TagSet: [
+              {Key: 'loggly-customer-token', Value: "bucket token"},
+              {Key: 'loggly-tag', Value: "the bucket tags"},
+            ],
+          });
+        }},
+        {promise: () => {
+          return Promise.resolve({
+            TagSet: [
+              {Key: 'loggly-customer-token', Value: "other token"},
+              {Key: 'loggly-tag', Value: "the other tags"},
+            ],
+          });
+        }}
+      );
+
+      this.parseSpy = spyOn(S3EventParser, 'parse').and.returnValues(
+        ["parsed s3", "parsed input", "parsed data"],
+        ["parsed other s3", "parsed other input", "parsed other data"]
       );
     });
 
@@ -253,6 +275,34 @@ describe("cloudwatch2loggly", () => {
       handleEvent().expectResult(() => {
         expect(this.parseSpy).toHaveBeenCalledWith("s3\ninput\ndata");
         expect(this.parseSpy).toHaveBeenCalledWith("other s3\nother input\nother data");
+      }).verify(done);
+    });
+
+    it("transfers the events to Loggly", (done) => {
+      var requestWriteSpy = spyOn(this.request, 'write');
+      var requestEndSpy = spyOn(this.request, 'end').and.callThrough();
+      handleEvent().expectResult(() => {
+        expect(this.requestSpy).toHaveBeenCalledTimes(2);
+        var requestOptions = this.requestSpy.calls.argsFor(0)[0];
+        expect(requestOptions.hostname).toEqual("the loggly host");
+        expect(requestOptions.path).toEqual('/bulk/bucket token/tag/the%20bucket%20tags');
+        expect(requestOptions.method).toEqual('POST');
+        expect(requestOptions.headers)
+            .toEqual({"Content-Type": 'application/json', "Content-Length": 40});
+
+        requestOptions = this.requestSpy.calls.argsFor(1)[0];
+        expect(requestOptions.hostname).toEqual("the loggly host");
+        expect(requestOptions.path).toEqual('/bulk/other token/tag/the%20other%20tags');
+        expect(requestOptions.method).toEqual('POST');
+        expect(requestOptions.headers)
+            .toEqual({"Content-Type": 'application/json', "Content-Length": 58});
+
+        expect(requestWriteSpy)
+            .toHaveBeenCalledWith('"parsed s3"\n"parsed input"\n"parsed data"');
+        expect(requestWriteSpy)
+            .toHaveBeenCalledWith('"parsed other s3"\n"parsed other input"\n"parsed other data"');
+
+        expect(requestEndSpy).toHaveBeenCalledTimes(2);
       }).verify(done);
     });
   });

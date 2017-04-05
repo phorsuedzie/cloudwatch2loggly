@@ -7,13 +7,13 @@ const zlib = require('zlib');
 const LogEventParser = require('scrivito-log-event-parser');
 const S3EventParser = require('s3-event-parser');
 
-var postEventsToLoggly = function(token, parsedEvents) {
+var postEventsToLoggly = function(token, tag, parsedEvents) {
   // Join all events for sending via bulk endpoint.
   var finalEvent = parsedEvents.map(JSON.stringify).join('\n');
 
   var options = {
     hostname: process.env.logglyHostName,
-    path: '/bulk/' + token + '/tag/' + encodeURIComponent(process.env.logglyTags),
+    path: '/bulk/' + token + '/tag/' + encodeURIComponent(tag),
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'Content-Length': finalEvent.length},
     timeout: 2000,
@@ -69,8 +69,33 @@ var processCloudWatchLogsEvent = function(event) {
       return LogEventParser.parse(logEvent, parsedPayload.logGroup, parsedPayload.logStream);
     });
 
-    return postEventsToLoggly(token, parsedEvents);
+    return postEventsToLoggly(token, process.env.logglyTags, parsedEvents);
   });
+};
+
+var processS3Event = function(event) {
+  var s3 = new AWS.S3();
+
+  return Promise.all(event.Records.map((record) => {
+    var Bucket = record.s3.bucket.name;
+    var Key = record.s3.object.key;
+    var readData = s3.getObject({Bucket, Key}).promise();
+    var readBucketTags = s3.getBucketTagging({Bucket}).promise().then((data) => {
+      var tags = {};
+      data.TagSet.forEach((tag) => { tags[tag.Key] = tag.Value; });
+      return tags;
+    });
+    return Promise.all([
+      readData.then((data) => { return S3EventParser.parse(data); }),
+      readBucketTags,
+    ]).then((results) => {
+      var parsedEvents = results[0];
+      var bucketTags = results[1];
+      var token = bucketTags['loggly-customer-token'];
+      var tag = bucketTags['loggly-tag'];
+      return postEventsToLoggly(token, tag, parsedEvents);
+    });
+  }));
 };
 
 exports.handler = function (event, context, callback) {
@@ -79,13 +104,7 @@ exports.handler = function (event, context, callback) {
   if (event.awslogs) {
     processingPromise = processCloudWatchLogsEvent(event);
   } else if (event.Records) {
-    var s3 = new AWS.S3();
-
-    processingPromise = Promise.all(event.Records.map((record) => {
-      var readData =
-          s3.getObject({Bucket: record.s3.bucket.name, Key: record.s3.object.key}).promise();
-      readData.then((data) => { S3EventParser.parse(data); });
-    }));
+    processingPromise = processS3Event(event);
   } else {
     throw `Unexpected event: ${util.inspect(event)}`;
   }
