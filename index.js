@@ -84,7 +84,7 @@ var processS3Event = function(event) {
     var readData = s3.getObject({Bucket, Key}).promise().then((s3obj) => { return s3obj.Body; });
     var readBucketTags = s3.getBucketTagging({Bucket}).promise().then((data) => {
       var tags = {};
-      data.TagSet.forEach((tag) => { tags[tag.Key] = tag.Value; });
+      for (var tag of data.TagSet) { tags[tag.Key] = tag.Value; }
       return tags;
     });
 
