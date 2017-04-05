@@ -240,8 +240,8 @@ describe("cloudwatch2loggly", () => {
       var s3 = new Aws.S3();
       spyOn(Aws, 'S3').and.returnValue(s3);
       this.s3DownloadSpy = spyOn(s3, 'getObject').and.returnValues(
-        {promise: () => { return Promise.resolve("s3\ninput\ndata"); }},
-        {promise: () => { return Promise.resolve("other s3\nother input\nother data"); }}
+        {promise: () => { return Promise.resolve({Body: Buffer.from("s3\ninput\ndata")}); }},
+        {promise: () => { return Promise.resolve({Body: "other s3\nother input\nother data"}); }}
       );
       this.s3TagSpy = spyOn(s3, 'getBucketTagging').and.returnValues(
         {promise: () => {

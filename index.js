@@ -90,7 +90,7 @@ var processS3Event = function(event) {
 
     console.log(`Processing record for object ${Key} in bucket ${Bucket}...`);
     return Promise.all([
-      readData.then((data) => { return S3LogParser.parse(data); }),
+      readData.then((data) => { return S3LogParser.parse(data.Body.toString()); }),
       readBucketTags,
     ]).then((results) => {
       var parsedEvents = results[0];
