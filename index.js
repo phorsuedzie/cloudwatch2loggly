@@ -50,6 +50,7 @@ var postEventsToLoggly = function(token, tag, parsedEvents) {
 };
 
 var processCloudWatchLogsEvent = function(event) {
+  console.log("Processing CloudWatchLogs event...");
   var kms = new AWS.KMS();
 
   return kms.decrypt({
@@ -74,6 +75,7 @@ var processCloudWatchLogsEvent = function(event) {
 };
 
 var processS3Event = function(event) {
+  console.log("Processing S3 event...");
   var s3 = new AWS.S3();
 
   return Promise.all(event.Records.map((record) => {
@@ -85,6 +87,8 @@ var processS3Event = function(event) {
       data.TagSet.forEach((tag) => { tags[tag.Key] = tag.Value; });
       return tags;
     });
+
+    console.log(`Processing record for object ${Key} in bucket ${Bucket}...`);
     return Promise.all([
       readData.then((data) => { return S3LogParser.parse(data); }),
       readBucketTags,
