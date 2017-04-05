@@ -214,19 +214,19 @@ describe("cloudwatch2loggly", () => {
   });
 
   describe("with S3 source", () => {
-    var buildEvent = (e) => {
+    var buildEvent = (keySuffix = "") => {
       return {
         Records: [
           {
             s3: {
               bucket: {name: "test bucket"},
-              object: {key: "log obj key", size: 123},
+              object: {key: `log obj key${keySuffix}`, size: 123},
             },
           },
           {
             s3: {
               bucket: {name: "other test bucket"},
-              object: {key: "other log obj key", size: 123},
+              object: {key: `other log obj key${keySuffix}`, size: 123},
             },
           },
         ],
@@ -315,5 +315,25 @@ describe("cloudwatch2loggly", () => {
     itBehavesLike("logging the Loggly response");
     itBehavesLike("handling not properly ended response");
     itBehavesLike("handling failed request");
+
+    describe("when S3 object is compressed", () => {
+      beforeEach(() => {
+        event = buildEvent(".gz");
+
+        this.s3DownloadSpy.and.returnValues(
+          {promise: () => { return Promise.resolve({Body: zlib.gzipSync("s3\ninput\ndata")}); }},
+          {promise: () => { return Promise.resolve({
+            Body: zlib.gzipSync("other s3\nother input\nother data")
+          }); }}
+        );
+      });
+
+      it("parses the uncompressed data", (done) => {
+        handleEvent().expectResult(() => {
+          expect(this.parseSpy).toHaveBeenCalledWith("s3\ninput\ndata");
+          expect(this.parseSpy).toHaveBeenCalledWith("other s3\nother input\nother data");
+        }).verify(done);
+      });
+    });
   });
 });

@@ -81,16 +81,20 @@ var processS3Event = function(event) {
   return Promise.all(event.Records.map((record) => {
     var Bucket = record.s3.bucket.name;
     var Key = record.s3.object.key;
-    var readData = s3.getObject({Bucket, Key}).promise();
+    var readData = s3.getObject({Bucket, Key}).promise().then((s3obj) => { return s3obj.Body; });
     var readBucketTags = s3.getBucketTagging({Bucket}).promise().then((data) => {
       var tags = {};
       data.TagSet.forEach((tag) => { tags[tag.Key] = tag.Value; });
       return tags;
     });
 
+    if (Key.endsWith(".gz")) {
+      readData = readData.then((compressedData) => { return zlib.gunzipSync(compressedData); });
+    }
+
     console.log(`Processing record for object ${Key} in bucket ${Bucket}...`);
     return Promise.all([
-      readData.then((data) => { return S3LogParser.parse(data.Body.toString()); }),
+      readData.then((data) => { return S3LogParser.parse(data.toString()); }),
       readBucketTags,
     ]).then((results) => {
       var parsedEvents = results[0];
