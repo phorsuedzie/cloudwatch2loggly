@@ -6,7 +6,7 @@ Aws.config.update({region: 'eu-west-1'});
 const zlib = require('zlib');
 const https = require('https');
 const LogEventParser = require('scrivito-log-event-parser');
-const S3EventParser = require('s3-event-parser');
+const S3LogParser = require('s3-log-parser');
 
 describe("cloudwatch2loggly", () => {
   var CloudWatch2Loggly = require('../index');
@@ -262,7 +262,7 @@ describe("cloudwatch2loggly", () => {
         }}
       );
 
-      this.parseSpy = spyOn(S3EventParser, 'parse').and.returnValues(
+      this.parseSpy = spyOn(S3LogParser, 'parse').and.returnValues(
         ["parsed s3", "parsed input", "parsed data"],
         ["parsed other s3", "parsed other input", "parsed other data"]
       );
@@ -277,7 +277,7 @@ describe("cloudwatch2loggly", () => {
       }).verify(done);
     });
 
-    it("parses the events using the S3EventParser", (done) => {
+    it("parses the events using the S3LogParser", (done) => {
       handleEvent().expectResult(() => {
         expect(this.parseSpy).toHaveBeenCalledWith("s3\ninput\ndata");
         expect(this.parseSpy).toHaveBeenCalledWith("other s3\nother input\nother data");

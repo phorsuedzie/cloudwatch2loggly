@@ -5,7 +5,7 @@ const https = require('https');
 const util = require('util');
 const zlib = require('zlib');
 const LogEventParser = require('scrivito-log-event-parser');
-const S3EventParser = require('s3-event-parser');
+const S3LogParser = require('s3-log-parser');
 
 var postEventsToLoggly = function(token, tag, parsedEvents) {
   // Join all events for sending via bulk endpoint.
@@ -86,7 +86,7 @@ var processS3Event = function(event) {
       return tags;
     });
     return Promise.all([
-      readData.then((data) => { return S3EventParser.parse(data); }),
+      readData.then((data) => { return S3LogParser.parse(data); }),
       readBucketTags,
     ]).then((results) => {
       var parsedEvents = results[0];
