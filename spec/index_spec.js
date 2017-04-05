@@ -38,6 +38,77 @@ describe("cloudwatch2loggly", () => {
     this.logSpy = spyOn(console, 'log');
   });
 
+  sharedExamplesFor("logging the Loggly response", () => {
+    it("logs the Loggly response", (done) => {
+      this.requestSpy.and.callFake((options, responseHandler) => {
+        var res = {on: (key, callback) => { res[key] = callback; }};
+        res.statusCode = 200;
+        responseHandler(res);
+        this.request.onEnd = () => {
+          res.data("part one");
+          res.data("part two");
+          res.end();
+        };
+        return this.request;
+      });
+
+      handleEvent().expectResult(() => {
+        expect(this.logSpy).toHaveBeenCalledWith("Loggly response status code: 200");
+        expect(this.logSpy).toHaveBeenCalledWith("Loggly responded: part one");
+        expect(this.logSpy).toHaveBeenCalledWith("Loggly responded: part two");
+      }).verify(done);
+    });
+  });
+
+  // This sounds wrong but is what has been observed:
+  // Loggly returns an OK result but the response's “end” callback is not being called within the
+  // lambda's timeout. The request timeout isn't triggered either.
+  sharedExamplesFor("handling not properly ended response", () => {
+    beforeEach(() => {
+      this.requestSpy.and.callFake((options, responseHandler) => {
+        var res = {on: (key, callback) => { res[key] = callback; }};
+        responseHandler(res);
+        this.request.onEnd = () => { res.data('{"response": "ok"}'); };
+        return this.request;
+      });
+    });
+
+    it("succeeds nevertheless", (done) => { handleEvent().expectResult().verify(done); });
+
+    describe("when a response chunk is not JSON", () => {
+      beforeEach(() => {
+        this.requestSpy.and.callFake((options, responseHandler) => {
+          var res = {on: (key, callback) => { res[key] = callback; }};
+          responseHandler(res);
+          this.request.onEnd = () => {
+            res.data("this ain't JSON");
+            res.data('{"response": "ok"}');
+          };
+          return this.request;
+        });
+      });
+
+      it("succeeds nevertheless", (done) => { handleEvent().expectResult().verify(done); });
+    });
+  });
+
+  sharedExamplesFor("handling failed request", () => {
+    beforeEach(() => {
+      this.requestSpy.and.callFake((options, responseHandler) => {
+        var res = {on: (key, callback) => { res[key] = callback; }};
+        responseHandler(res);
+        this.request.onEnd = () => { throw "failure"; };
+        return this.request;
+      });
+    });
+
+    it("fails with the occurred error", (done) => {
+      handleEvent().expectError((error) => {
+        expect(error).toEqual(Error("failure"));
+      }).verify(done);
+    });
+  });
+
   describe("with CloudWatchLogs source", () => {
     var buildEvent = (e) => {
       return {"awslogs": {"data": zlib.gzipSync(JSON.stringify(e)).toString("base64")}};
@@ -87,25 +158,9 @@ describe("cloudwatch2loggly", () => {
       }).verify(done);
     });
 
-    it("logs the Loggly response", (done) => {
-      this.requestSpy.and.callFake((options, responseHandler) => {
-        var res = {on: (key, callback) => { res[key] = callback; }};
-        res.statusCode = 200;
-        responseHandler(res);
-        this.request.onEnd = () => {
-          res.data("part one");
-          res.data("part two");
-          res.end();
-        };
-        return this.request;
-      });
-
-      handleEvent().expectResult(() => {
-        expect(this.logSpy).toHaveBeenCalledWith("Loggly response status code: 200");
-        expect(this.logSpy).toHaveBeenCalledWith("Loggly responded: part one");
-        expect(this.logSpy).toHaveBeenCalledWith("Loggly responded: part two");
-      }).verify(done);
-    });
+    itBehavesLike("logging the Loggly response");
+    itBehavesLike("handling not properly ended response");
+    itBehavesLike("handling failed request");
 
     describe("when log event contains UTF-8", () => {
       beforeEach(() => {
@@ -126,38 +181,6 @@ describe("cloudwatch2loggly", () => {
               toHaveBeenCalledWith('"parsed €vent"\n"parsed üvent"\n"parsed evenд"');
           expect(requestEndSpy).toHaveBeenCalled();
         }).verify(done);
-      });
-    });
-
-    // This sounds wrong but is what has been observed: Loggly returns an OK result but the
-    // response's “end” callback is not being called within the lambda's timeout. The request
-    // timeout isn't triggered either.
-    describe("when HTTPS response is not ended properly", () => {
-      beforeEach(() => {
-        this.requestSpy.and.callFake((options, responseHandler) => {
-          var res = {on: (key, callback) => { res[key] = callback; }};
-          responseHandler(res);
-          this.request.onEnd = () => { res.data('{"response": "ok"}'); };
-          return this.request;
-        });
-      });
-
-      it("succeeds nevertheless", (done) => { handleEvent().expectResult().verify(done); });
-
-      describe("when a response chunk is not JSON", () => {
-        beforeEach(() => {
-          this.requestSpy.and.callFake((options, responseHandler) => {
-            var res = {on: (key, callback) => { res[key] = callback; }};
-            responseHandler(res);
-            this.request.onEnd = () => {
-              res.data("this ain't JSON");
-              res.data('{"response": "ok"}');
-            };
-            return this.request;
-          });
-        });
-
-        it("succeeds nevertheless", (done) => { handleEvent().expectResult().verify(done); });
       });
     });
 
@@ -185,23 +208,6 @@ describe("cloudwatch2loggly", () => {
       it("fails with the occurred error", (done) => {
         handleEvent().expectError((error) => {
           expect(error).toEqual(Error("fail"));
-        }).verify(done);
-      });
-    });
-
-    describe("when loggly responds with error", () => {
-      beforeEach(() => {
-        this.requestSpy.and.callFake((options, responseHandler) => {
-          var res = {on: (key, callback) => { res[key] = callback; }};
-          responseHandler(res);
-          this.request.onEnd = () => { throw "failure"; };
-          return this.request;
-        });
-      });
-
-      it("fails with the occurred error", (done) => {
-        handleEvent().expectError((error) => {
-          expect(error).toEqual(Error("failure"));
         }).verify(done);
       });
     });
@@ -305,5 +311,9 @@ describe("cloudwatch2loggly", () => {
         expect(requestEndSpy).toHaveBeenCalledTimes(2);
       }).verify(done);
     });
+
+    itBehavesLike("logging the Loggly response");
+    itBehavesLike("handling not properly ended response");
+    itBehavesLike("handling failed request");
   });
 });
