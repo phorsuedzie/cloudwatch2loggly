@@ -6,6 +6,7 @@ Aws.config.update({region: 'eu-west-1'});
 const zlib = require('zlib');
 const https = require('https');
 const LogEventParser = require('scrivito-log-event-parser');
+const S3EventParser = require('s3-event-parser');
 
 describe("cloudwatch2loggly", () => {
   var CloudWatch2Loggly = require('../index');
@@ -229,17 +230,29 @@ describe("cloudwatch2loggly", () => {
 
     beforeEach(() => {
       event = buildEvent();
+
+      this.parseSpy = spyOn(S3EventParser, 'parse').and.returnValue("parsed event");
+      var s3 = new Aws.S3();
+      spyOn(Aws, 'S3').and.returnValue(s3);
+      this.s3DownloadSpy = spyOn(s3, 'getObject').and.returnValues(
+        {promise: () => { return Promise.resolve("s3\ninput\ndata"); }},
+        {promise: () => { return Promise.resolve("other s3\nother input\nother data"); }}
+      );
     });
 
     it("reads all the log data from S3", (done) => {
-      var s3 = new Aws.S3();
-      spyOn(Aws, 'S3').and.returnValue(s3);
-      var s3DownloadSpy = spyOn(s3, 'getObject').and
-          .returnValue({promise: () => { return Promise.resolve("s3\ninput\ndata"); }});
       handleEvent().expectResult(() => {
-        expect(s3DownloadSpy).toHaveBeenCalledWith({Bucket: 'test bucket', Key: 'log obj key'});
-        expect(s3DownloadSpy).toHaveBeenCalledWith({
+        expect(this.s3DownloadSpy)
+            .toHaveBeenCalledWith({Bucket: 'test bucket', Key: 'log obj key'});
+        expect(this.s3DownloadSpy).toHaveBeenCalledWith({
             Bucket: 'other test bucket', Key: 'other log obj key'});
+      }).verify(done);
+    });
+
+    it("parses the events using the S3EventParser", (done) => {
+      handleEvent().expectResult(() => {
+        expect(this.parseSpy).toHaveBeenCalledWith("s3\ninput\ndata");
+        expect(this.parseSpy).toHaveBeenCalledWith("other s3\nother input\nother data");
       }).verify(done);
     });
   });

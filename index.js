@@ -1,10 +1,11 @@
 'use strict';
 
-const AWS = require('aws-sdk'),
-    https = require('https'),
-    util = require('util'),
-    zlib = require('zlib'),
-    LogEventParser = require('scrivito-log-event-parser');
+const AWS = require('aws-sdk');
+const https = require('https');
+const util = require('util');
+const zlib = require('zlib');
+const LogEventParser = require('scrivito-log-event-parser');
+const S3EventParser = require('s3-event-parser');
 
 var postEventsToLoggly = function(token, parsedEvents) {
   // Join all events for sending via bulk endpoint.
@@ -81,7 +82,9 @@ exports.handler = function (event, context, callback) {
     var s3 = new AWS.S3();
 
     processingPromise = Promise.all(event.Records.map((record) => {
-      return s3.getObject({Bucket: record.s3.bucket.name, Key: record.s3.object.key}).promise();
+      var readData =
+          s3.getObject({Bucket: record.s3.bucket.name, Key: record.s3.object.key}).promise();
+      readData.then((data) => { S3EventParser.parse(data); });
     }));
   } else {
     throw `Unexpected event: ${util.inspect(event)}`;
