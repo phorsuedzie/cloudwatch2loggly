@@ -1,7 +1,7 @@
 {
   "name": "cloudwatch2loggly",
-  "version": "1.0.0",
-  "description": "A NodeJS library to send Cloudwatch logs to Loggly",
+  "version": "1.0.1",
+  "description": "A NodeJS AWS Lambda to send logs from several AWS sources to Loggly",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,10 +11,10 @@
     "url": "https://github.com/infopark/cloudwatch2loggly.git"
   },
   "keywords": [
-    "Loggly",
-    "Cloudwatch"
+    "AWS",
+    "Loggly"
   ],
-  "author": "psquickitjayant",
+  "author": "Tilo Prütz",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/infopark/cloudwatch2loggly/issues"
@@ -23,14 +23,12 @@
   "dependencies": {},
   "devDependencies": {
     "aws-sdk": "^2.22.0",
-    "code_cowboy-jasmine-shared-examples": "0.0.2",
+    "code_cowboy-jasmine-shared-examples": "^0.0.2",
+    "code_cowboy-lambda-jakefile": "^0.0.1",
     "jake": "^8.0.15",
     "jasmine": "^2.5.3",
     "jasmine-spec-reporter": "^3.2.0",
     "lambda-tester": "^2.8.0",
-    "procstreams": "^0.3.0",
-    "shared-examples-for": "^0.1.3",
-    "slackr": "^1.0.0",
-    "tempy": "^0.1.0"
+    "shared-examples-for": "^0.1.3"
   }
 }
