@@ -1,6 +1,7 @@
+const $ = require('procstreams');
+
 desc('Creates a package for upload to AWS.');
 task('package', {async: true}, function () {
-  const $ = require('procstreams');
   const Tempy = require('tempy');
   const Path = require('path');
 
@@ -55,5 +56,42 @@ task('deploy', ['package'], {async: true}, function(functionName) {
       Name: 'active',
       FunctionVersion: result.Version,
     }).promise();
-  })
+  }).then(() => {
+    return new Promise((resolve, reject) => {
+      if (!process.env.DRI_SLACK_WEBHOOK_URI) {
+        reject("DRI_SLACK_WEBHOOK_URI is not set.");
+      }
+      $("git remote get-url origin").data((err, stdout, stderr) => {
+        if (err) { throw err; }
+        resolve(stdout.toString().trim());
+      });
+    }).then((repoUrl) => {
+      slackr = require('slackr');
+      slackr.conf.uri = process.env.DRI_SLACK_WEBHOOK_URI;
+      if (repoUrl.startsWith("git@github.com:")) {
+        repoUrl = `https://github.com/${repoUrl.slice(15)}`;
+      }
+      var commitUrl = repoUrl;
+      if (repoUrl.startsWith("https://github.com")) {
+        commitUrl = `${repoUrl}/commit/${package.commit}`;
+      }
+
+      return new Promise((resolve, reject) => {
+        $("git show --pretty=format:%s --no-patch").data((err, stdout, stderr) => {
+          if (err) { throw err; }
+          resolve(stdout.toString().trim());
+        });
+      }).then((commitMsg) => {
+        var announcement = `:aws: :lambda: (${functionName}) ` +
+            `@${process.env.SLACK_USER || process.env.USER} deployed ` +
+            `“<${commitUrl}|${commitMsg.replace(">", "&gt;")}>”.`;
+        return slackr.string(announcement).then(() => {
+          console.log(`Sent DRI announcement: ${announcement}`);
+        });
+      })
+    }).catch((error) => {
+      console.log(`Could not notify DRI channel: ${error}`);
+      console.log("Don't forget to post an announcement there.");
+    });
+  });
 });
