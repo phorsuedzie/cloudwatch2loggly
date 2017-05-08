@@ -22,10 +22,8 @@
   "homepage": "https://github.com/infopark/cloudwatch2loggly",
   "dependencies": {},
   "devDependencies": {
-    "aws-sdk": "^2.22.0",
     "code_cowboy-jasmine-shared-examples": "^0.0.2",
     "code_cowboy-lambda-jakefile": "^0.0",
-    "jake": "^8.0.15",
     "jasmine": "^2.5.3",
     "jasmine-spec-reporter": "^3.2.0",
     "lambda-tester": "^2.8.0",
