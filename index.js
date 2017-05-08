@@ -114,8 +114,10 @@ exports.handler = function (event, context, callback) {
   } else if (event.Records) {
     processingPromise = processS3Event(event);
   } else {
-    throw `Unexpected event: ${util.inspect(event)}`;
+    callback(`Unexpected event: ${util.inspect(event)}`);
   }
 
-  processingPromise.then(() => { callback(); }).catch((error) => { callback(error); });
+  if (processingPromise) {
+    processingPromise.then(() => { callback(); }).catch((error) => { callback(error); });
+  }
 };

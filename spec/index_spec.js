@@ -336,4 +336,16 @@ describe("cloudwatch2loggly", () => {
       });
     });
   });
+
+  describe("with unexpected source", () => {
+    var buildEvent = (e) => { return {"some": "event"}; };
+
+    beforeEach(() => { event = buildEvent(); });
+
+    it("fails", (done) => {
+      handleEvent().expectError((error) => {
+        expect(error).toEqual(Error("Unexpected event: { some: 'event' }"));
+      }).verify(done);
+    });
+  });
 });
