@@ -30,6 +30,7 @@ describe("cloudwatch2loggly", () => {
     };
     this.requestSpy = spyOn(https, 'request').and.callFake((options, responseHandler) => {
       var res = {on: (key, callback) => { res[key] = callback; }};
+      res.statusCode = 200;
       responseHandler(res);
       this.request.onEnd = () => { res.end(); };
       return this.request;
@@ -93,19 +94,51 @@ describe("cloudwatch2loggly", () => {
   });
 
   sharedExamplesFor("handling failed request", () => {
-    beforeEach(() => {
-      this.requestSpy.and.callFake((options, responseHandler) => {
-        var res = {on: (key, callback) => { res[key] = callback; }};
-        responseHandler(res);
-        this.request.onEnd = () => { throw "failure"; };
-        return this.request;
+    describe("when an HTTP error exception occurs", () => {
+      beforeEach(() => {
+        this.requestSpy.and.callFake((options, responseHandler) => {
+          var res = {on: (key, callback) => { res[key] = callback; }};
+          res.statusCode = 502;
+          responseHandler(res);
+          this.request.onEnd = () => {
+            res.data("error part one");
+            res.data("error part two");
+            res.end();
+          };
+          return this.request;
+        });
+      });
+
+      it("fails with the occurred error", (done) => {
+        handleEvent().expectError((error) => {
+          expect(error).toEqual(Error("request failed: 502 undefined"));
+        }).verify(done);
+      });
+
+      it("logs the Loggly response", (done) => {
+        handleEvent().expectError(() => {
+          expect(this.logSpy).toHaveBeenCalledWith("Loggly response status code: 502");
+          expect(this.logSpy).toHaveBeenCalledWith("Loggly responded: error part one");
+          expect(this.logSpy).toHaveBeenCalledWith("Loggly responded: error part two");
+        }).verify(done);
       });
     });
 
-    it("fails with the occurred error", (done) => {
-      handleEvent().expectError((error) => {
-        expect(error).toEqual(Error("failure"));
-      }).verify(done);
+    describe("when an exception occurs", () => {
+      beforeEach(() => {
+        this.requestSpy.and.callFake((options, responseHandler) => {
+          var res = {on: (key, callback) => { res[key] = callback; }};
+          responseHandler(res);
+          this.request.onEnd = () => { throw "failure"; };
+          return this.request;
+        });
+      });
+
+      it("fails with the occurred error", (done) => {
+        handleEvent().expectError((error) => {
+          expect(error).toEqual(Error("failure"));
+        }).verify(done);
+      });
     });
   });
 
