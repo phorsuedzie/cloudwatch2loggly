@@ -24,7 +24,7 @@ var postEventsToLoggly = function(token, tag, parsedEvents) {
 
     var perform = () => {
       var req = https.request(options, function (res) {
-        console.log(`Loggly response status code: ${res.statusCode}`)
+        console.log(`Loggly response status code: ${res.statusCode}`);
         res.on('data', function (chunk) {
           console.log(`Loggly responded: ${chunk}`);
           try {
@@ -33,7 +33,13 @@ var postEventsToLoggly = function(token, tag, parsedEvents) {
             }
           } catch(e) {}
         });
-        res.on('end', function () { resolve(); });
+        res.on('end', function () {
+          if (res.statusCode < 300) {
+            resolve();
+          } else {
+            reject(`request failed: ${res.statusCode} ${res.statusMessage}`);
+          }
+        });
       });
 
       req.setTimeout(9900, () => {
@@ -114,8 +120,10 @@ exports.handler = function (event, context, callback) {
   } else if (event.Records) {
     processingPromise = processS3Event(event);
   } else {
-    throw `Unexpected event: ${util.inspect(event)}`;
+    callback(`Unexpected event: ${util.inspect(event)}`);
   }
 
-  processingPromise.then(() => { callback(); }).catch((error) => { callback(error); });
+  if (processingPromise) {
+    processingPromise.then(() => { callback(); }).catch((error) => { callback(error); });
+  }
 };
