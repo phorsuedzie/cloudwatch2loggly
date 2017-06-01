@@ -55,14 +55,23 @@ var postEventsToLoggly = function(token, tag, parsedEvents) {
   });
 };
 
+var logglyTokenFromEnv;
+var getLogglyTokenFromEnv = function() {
+  if (!logglyTokenFromEnv) {
+    var kms = new AWS.KMS();
+    logglyTokenFromEnv = kms.decrypt({
+      CiphertextBlob: new Buffer(process.env.kmsEncryptedCustomerToken, 'base64')
+    }).promise().then((data) => {
+      return data.Plaintext.toString('ascii');
+    });
+  }
+  return logglyTokenFromEnv;
+};
+
 var processCloudWatchLogsEvent = function(event) {
   console.log("Processing CloudWatchLogs event...");
-  var kms = new AWS.KMS();
 
-  return kms.decrypt({
-    CiphertextBlob: new Buffer(process.env.kmsEncryptedCustomerToken, 'base64')
-  }).promise().then((data) => {
-    var token = data.Plaintext.toString('ascii');
+  return getLogglyTokenFromEnv().then((token) => {
     var payload = new Buffer(event.awslogs.data, 'base64');
     var rawPayload = zlib.gunzipSync(payload).toString();
     var parsedPayload;
@@ -126,4 +135,8 @@ exports.handler = function (event, context, callback) {
   if (processingPromise) {
     processingPromise.then(() => { callback(); }).catch((error) => { callback(error); });
   }
+};
+
+exports.clearCaches = function() {
+  logglyTokenFromEnv = undefined;
 };
