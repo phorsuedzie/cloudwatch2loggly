@@ -18,6 +18,7 @@ describe("LogEventParser", () => {
     beforeEach(() => {
       core_message = "  \n  a message  \n  ";
       message = () => { return core_message; };
+      spyOn(console, 'log');
     });
 
     it("contains basic information and the trimmed message", () => {
