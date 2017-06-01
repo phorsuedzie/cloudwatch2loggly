@@ -37,6 +37,9 @@ describe("cloudwatch2loggly", () => {
     });
 
     this.logSpy = spyOn(console, 'log');
+
+    // token decryption is cached
+    CloudWatch2Loggly.clearCaches();
   });
 
   sharedExamplesFor("logging the Loggly response", () => {
@@ -161,6 +164,16 @@ describe("cloudwatch2loggly", () => {
       var decryptSpy = spyOn(this.kms, 'decrypt').and.returnValue(this.decryptResult);
       handleEvent().expectResult(() => {
         expect(decryptSpy).toHaveBeenCalledWith({CiphertextBlob: new Buffer("Zm9v", 'base64')});
+      }).verify(done);
+    });
+
+    it("decrypts the Loggly API token only once per process", (done) => {
+      var decryptSpy = spyOn(this.kms, 'decrypt').and.returnValue(this.decryptResult);
+      handleEvent().expectResult(() => {
+        handleEvent().expectResult(() => {
+          expect(decryptSpy).toHaveBeenCalledWith({CiphertextBlob: new Buffer("Zm9v", 'base64')});
+          expect(decryptSpy.calls.count()).toEqual(1);
+        });
       }).verify(done);
     });
 
