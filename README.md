@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/infopark/cloudwatch2loggly.svg?branch=master)](https://travis-ci.org/infopark/cloudwatch2loggly)
+
 # Dev setup
 - `brew install npm`
 - `brew install n`   # the node version manager
