@@ -1,10 +1,26 @@
+# Dev setup
+- `brew install npm`
+- `brew install n`   # the node version manager
+- `sudo n 6.10`      # use a static (old, LTS, AWS compatible) node version
+- `npm install`
+- `npm test`         # or ...
+- `node_modules/.bin/jasmine` # For the unlucky ones ...
+
+# Deployment
+
+```
+AWS_PROFILE=prod jake deploy[scrivito-backend-logs2loggly]
+```
+
+And now for the original readme ...
+
 # cloudwatch2loggly
 Sends logs from Cloudwatch logs to Loggly using Lamda function
 
 ## More information about AWS Lambda and Loggly
   * http://aws.amazon.com/lambda/
   * https://www.loggly.com/
-  
+
 ## Get the code and prepare it for the uploading to AWS
 * Clone the git repo
 ```bash
@@ -24,9 +40,9 @@ zip -r cloudwatch2loggly.zip index.js node_modules
 The resulting zip (cloudwatch2loggly.zip) is what you will upload to AWS.
 
 ## Setting up AWS
-For all of the AWS setup, I used the AWS console following [this 
-example](http://docs.aws.amazon.com/lambda/latest/dg/getting-started-amazons3-events.html).  Below, you will find a high-level 
-description of how to do this.  I also found [this blog post](http://alestic.com/2014/11/aws-lambda-cli) on how to set things up 
+For all of the AWS setup, I used the AWS console following [this
+example](http://docs.aws.amazon.com/lambda/latest/dg/getting-started-amazons3-events.html).  Below, you will find a high-level
+description of how to do this.  I also found [this blog post](http://alestic.com/2014/11/aws-lambda-cli) on how to set things up
 using the command line tools.
 
 ### Create and upload the cloudwatch2loggly function in the AWS Console
