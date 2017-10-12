@@ -6,6 +6,14 @@
 - `npm test`         # or ...
 - `node_modules/.bin/jasmine` # For the unlucky ones ...
 
+# Deployment
+
+```
+AWS_PROFILE=prod jake deploy[scrivito-backend-logs2loggly]
+```
+
+And now for the original readme ...
+
 # cloudwatch2loggly
 Sends logs from Cloudwatch logs to Loggly using Lamda function
 
