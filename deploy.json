@@ -1,0 +1,5 @@
+{
+    "deployments": [
+        {"functionName": "scrivito-backend-logs2loggly"}
+    ]
+}
